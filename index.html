@@ -108,10 +108,10 @@ nav button span{font-size:20px}nav button.on{background:rgba(226,59,59,.16);colo
 
 <script>
 /* ================= CONFIG ================= */
-const FREE_LIMIT = 5;          // lessons 1..5 free, lesson 6+ = Premium (in every level)
-const AUDIO_BASE = "";         // e.g. "audio/" → plays audio/你好.mp3 ; empty = Web Speech API only
-const BOOKS = {                // textbook covers: put your own images in /img (or use any URL)
-  1:{img:"img/hsk1.jpg", t:"Китоби дарсӣ · HSK 1"},
+const FREE_LIMIT = 10;         // 10 free lessons for HSK 1, lessons 11-15 = Premium
+const AUDIO_BASE = ""; 
+const BOOKS = {
+  1:{img:"img/hsk1.jpg", t:"Китоби дарсӣ · HSK 1 (2.0)"},
   2:{img:"img/hsk2.jpg", t:"Китоби дарсӣ · HSK 2"},
   3:{img:"img/hsk3.jpg", t:"Китоби дарсӣ · HSK 3"}
 };
@@ -125,44 +125,71 @@ let backFn = null;
 const setBack = f => { backFn = f; try { f ? tg.BackButton.show() : tg.BackButton.hide(); } catch(e){} };
 try { tg.BackButton.onClick(() => backFn && backFn()); } catch(e){}
 
-/* ================= STORAGE (localStorage + Telegram CloudStorage) ================= */
+/* ================= STORAGE ================= */
 const store = {
   get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } },
   set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){}
             try { tg.CloudStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 };
 
-/* ================= CONTENT =================
-   word   = hanzi | pinyin | Tajik | Russian | English
-   lesson = [title, [sentence zh, pinyin, Tajik] | undefined, words | undefined]   (no words = "coming soon") */
+/* ================= CONTENT (HSK 1 Version 2.0 - 15 Lessons) ================= */
 const P = s => s.split(";").map(x => x.split("|"));
-const GEN = ["Грамматика","Хониш","Гӯш кардан","Навиштан","Такрор","Луғати иловагӣ"].map(t => [t]);
-const fill = (a, n = 7) => a.concat(GEN.slice(0, n - a.length));
 const LV = {
- 1:[["Салом ва дуруд",["你好，很高兴认识你。","nǐ hǎo, hěn gāoxìng rènshi nǐ.","Салом, аз шиносоӣ шодам."],
+ 1:[
+    /* Lesson 1 */
+    ["Салом ва дуруд",["你好，很高兴认识你。","nǐ hǎo, hěn gāoxìng rènshi nǐ.","Салом, аз шиносоӣ шодам."],
      P("你好|nǐ hǎo|Салом|Привет|Hello;您好|nín hǎo|Салом (бо эҳтиром)|Здравствуйте|Hello (polite);谢谢|xièxie|Ташаккур|Спасибо|Thank you;不客气|bú kèqi|Намеояд|Не за что|You’re welcome;对不起|duìbuqǐ|Бубахшед|Извините|Sorry;再见|zàijiàn|Хайр|До свидания|Goodbye")],
+    /* Lesson 2 */
     ["Рақамҳо ва санаҳо",["今天是十月二十四号。","jīntiān shì shí yuè èrshísì hào.","Имрӯз 24-уми октябр аст."],
      P("一|yī|Як|Один|One;二|èr|Ду|Два|Two;三|sān|Се|Три|Three;十|shí|Даҳ|Десять|Ten;今天|jīntiān|Имрӯз|Сегодня|Today;明天|míngtiān|Фардо|Завтра|Tomorrow")],
+    /* Lesson 3 */
     ["Оила ва дӯстон",["我爸爸妈妈很爱我。","wǒ bàba māma hěn ài wǒ.","Падару модарам маро бисёр дӯст медоранд."],
      P("爸爸|bàba|Падар|Папа|Father;妈妈|māma|Модар|Мама|Mother;哥哥|gēge|Бародари калон|Старший брат|Older brother;姐姐|jiějie|Хоҳари калон|Старшая сестра|Older sister;朋友|péngyou|Дӯст|Друг|Friend;家|jiā|Хона / оила|Дом / семья|Home / family")],
+    /* Lesson 4 */
     ["Хӯрок ва нӯшокӣ",["我想喝茶。","wǒ xiǎng hē chá.","Ман мехоҳам чой нӯшам."],
      P("水|shuǐ|Об|Вода|Water;茶|chá|Чой|Чай|Tea;米饭|mǐfàn|Биринҷ|Рис|Rice;苹果|píngguǒ|Себ|Яблоко|Apple;吃|chī|Хӯрдан|Есть|To eat;喝|hē|Нӯшидан|Пить|To drink")],
+    /* Lesson 5 */
     ["Харид ва нарх",["这个多少钱？","zhège duōshao qián?","Ин чанд пул аст?"],
      P("多少钱|duōshao qián|Чанд пул?|Сколько стоит?|How much?;买|mǎi|Харидан|Купить|To buy;贵|guì|Гарон|Дорого|Expensive;便宜|piányi|Арзон|Дёшево|Cheap;块|kuài|Юан|Юань|Yuan;商店|shāngdiàn|Мағоза|Магазин|Shop")],
-    ["Вақт ва реҷаи рӯз"], ["Шавқҳо ва варзиш"]],
- 2:fill([["Обу ҳаво ва сафар",["今天天气很好。","jīntiān tiānqì hěn hǎo.","Имрӯз обу ҳаво хеле хуб аст."],
-     P("天气|tiānqì|Обу ҳаво|Погода|Weather;下雨|xià yǔ|Борон меборад|Идёт дождь|To rain;冷|lěng|Сард|Холодно|Cold;热|rè|Гарм|Жарко|Hot;旅游|lǚyóu|Сайёҳат|Путешествовать|To travel;飞机|fēijī|Ҳавопаймо|Самолёт|Plane")],
-    ["Саломатӣ",["我身体不舒服。","wǒ shēntǐ bù shūfu.","Ҳолам хуб нест."],
-     P("身体|shēntǐ|Бадан|Тело|Body;医院|yīyuàn|Беморхона|Больница|Hospital;生病|shēngbìng|Касал шудан|Заболеть|To get sick;药|yào|Дору|Лекарство|Medicine;头|tóu|Сар|Голова|Head;休息|xiūxi|Истироҳат|Отдыхать|To rest")]]),
- 3:fill([["Таҳсил",["老师问了一个问题。","lǎoshī wèn le yí gè wèntí.","Муаллим як савол дод."],
-     P("老师|lǎoshī|Муаллим|Учитель|Teacher;学生|xuésheng|Донишҷӯ|Ученик|Student;考试|kǎoshì|Имтиҳон|Экзамен|Exam;作业|zuòyè|Вазифаи хонагӣ|Домашнее задание|Homework;问题|wèntí|Савол|Вопрос|Question;图书馆|túshūguǎn|Китобхона|Библиотека|Library")]]),
- 4:fill([["Кор ва касб",["我想申请这个机会。","wǒ xiǎng shēnqǐng zhège jīhuì.","Ман мехоҳам барои ин имконият дархост диҳам."],
-     P("经验|jīngyàn|Таҷриба|Опыт|Experience;会议|huìyì|Маҷлис|Совещание|Meeting;公司|gōngsī|Ширкат|Компания|Company;经理|jīnglǐ|Мудир|Менеджер|Manager;申请|shēnqǐng|Дархост кардан|Подавать заявку|To apply;机会|jīhuì|Имконият|Возможность|Opportunity")]]),
- 5:fill([["Ҷамъият",["环境影响社会发展。","huánjìng yǐngxiǎng shèhuì fāzhǎn.","Муҳити зист ба рушди ҷамъият таъсир мерасонад."],
-     P("社会|shèhuì|Ҷамъият|Общество|Society;环境|huánjìng|Муҳити зист|Окружающая среда|Environment;经济|jīngjì|Иқтисод|Экономика|Economy;文化|wénhuà|Фарҳанг|Культура|Culture;影响|yǐngxiǎng|Таъсир|Влияние|Influence;发展|fāzhǎn|Рушд|Развитие|Development")]]),
- 6:fill([["Андеша",["智慧来自经验。","zhìhuì láizì jīngyàn.","Хирад аз таҷриба меояд."],
-     P("哲学|zhéxué|Фалсафа|Философия|Philosophy;观念|guānniàn|Тасаввурот|Представление|Concept;矛盾|máodùn|Тазод|Противоречие|Contradiction;智慧|zhìhuì|Хирад|Мудрость|Wisdom;传统|chuántǒng|Анъана|Традиция|Tradition;创新|chuàngxīn|Навоварӣ|Инновация|Innovation")]])
+    /* Lesson 6 */
+    ["Вақт ва соат",["现在几点？","xiànzài jǐ diǎn?","Ҳоло соат чанд аст?"],
+     P("现在|xiànzài|Ҳоло|Сейчас|Now;点|diǎn|Соат|Час|O'clock;分|fēn|Дақиқа|Минута|Minute;中午|zhōngwӯ|Нимаи рӯз|Полдень|Noon;时候|shihou|Вақт|Время|Time")],
+    /* Lesson 7 */
+    ["Хона ва ҷой",["我的书在桌子上。","wǒ de shū zài zhuōzi shàng.","Китоби ман дар болои миз аст."],
+     P("书|shū|Китоб|Книга|Book;桌子|zhuōzi|Миз|Стол|Table;上面|shàngmian|Дар боло|Наверху|On top;里|lǐ|Дар дарун|Внутри|Inside;哪儿|nάρ|Куҷо|Где|Where;字|zì|Ҳарф|Иероглиф|Character")],
+    /* Lesson 8 */
+    ["Кор ва машғулият",["他在 Dushanbe 工作。","tā zài Dushanbe gōngzuò.","Ӯ дар Душанбе кор мекунад."],
+     P("工作|gōngzuò|Кор кардан / кор|Работать / работа|To work / work;医生|yīshēng|Духтур|Врач|Doctor;医院|yīyuàn|Беморхона|Больница|Hospital;做|zuò|Кардан|Делать|To do;学生|xuésheng|Донишҷӯ|Ученик|Student")],
+    /* Lesson 9 */
+    ["Ҳаво ва табиат",["今天天气руз.","jīntiān tiānqì hěn hǎo.","Обу ҳавои имрӯз хуб аст."],
+     P("天气|tiānqì|Обу ҳаво|Погода|Weather;下雨|xià yǔ|Борон меборад|Идёт дождь|To rain;冷|lěng|Сард|Холодно|Cold;热|rè|Гарм|Жарко|Hot;太|tài|Хеле / бисёр|Слишком / очень|Too / very")],
+    /* Lesson 10 */
+    ["Хӯрдан ва пухтупаз",["你会做中国菜吗？","nǐ huì zuò zhōngguó cài ma?","Оё ту хӯроки чинӣ пухта метавонӣ?"],
+     P("会|huì|Тавонистан|Уметь|Can;菜|cài|Хӯрок / сабзавот|Блюдо / овощ|Dish / vegetable;做|zuò|Пухтан / кардан|Готовить / делать|To cook / make;好吃|hǎochī|Маззадор|Вкусно|Delicious; 怎么|zěnme|Чӣ тавр|Как|How")],
+    /* Lesson 11 (Premium) */
+    ["Сафар ва нақлиёт",["我想去北京旅游。","wǒ xiǎng qù běijīng lǚyóu.","Ман мехоҳам ба Пекин сафар кунам."],
+     P("去|qù|Рафтан|Идти|To go; 飞机|fēijī|Ҳавопаймо|Самолёт|Plane; 哪儿|nǎr|Куҷо|Куда|Where; 坐|zuò|Нишастан|Сидеть|To sit / take; 火车站|huǒchēzhàn|Истгоҳи оҳан|Ж/д вокзал|Train station")],
+    /* Lesson 12 (Premium) */
+    ["Ҷойгиршавӣ",["银行在学校前面。","yínháng zài xuéxiào qiánmiàn.","Бонк пеши мактаб аст."],
+     P("前面|qiánmiàn|Пеш / дар пеш|Впереди|In front; 后面|hòumiàn|Қафо / дар қафо|Сзади|Behind; 银行|yínháng|Бонк|Банк|Bank; 远|yuǎn|Дур|Далеко|Far; 近|jìn|Наздик|Близко|Near")],
+    /* Lesson 13 (Premium) */
+    ["Вазъи саломатӣ",["我身体有点儿不舒服。","wǒ shēntǐ yǒudiǎnr bù shūfu.","Тани ман каме нороҳат аст."],
+     P("身体|shēntǐ|Бадан / саломатӣ|Тело / здоровье|Body / health; 药|yào|Дору|Лекарство|Medicine; 医院|yīyuàn|Беморхона|Больница|Hospital; 休息|xiūxi|Истироҳат кардан|Отдыхать|To rest; 觉|jiào|Хоб|Сон|Sleep")],
+    /* Lesson 14 (Premium) */
+    ["Ориентирҳо ва рангҳо",["那个红色的很好看。","nà ge hóngsè de hěn hǎokàn.","Он чизи сурх хеле зебо аст."],
+     P("颜色|yánsè|Ранг|Цвет|Color; 红色|hóngsè|Сурх|Красный|Red; 绿色|lǜsè|Сабз|Зелёный|Green; 穿|chuān|Пӯшидан (либос)|Одевать|To wear; 衣服|yīfu|Либос|Одежда|Clothes")],
+    /* Lesson 15 (Premium) */
+    ["Хариду фурӯш ва таассурот",["这件衣服太贵了。","zhè jiàn yīfu tài guì le.","Ин либос хеле гарон аст."],
+     P("贵|guì|Гарон|Дорого|Expensive; 便宜|piányi|Арзон|Дешево|Cheap; 试|shì|Санҷидан|Примерять|To try; 颜色|yánsè|Ранг|Цвет|Color; 觉得|juéde|Фикр кардан|Думать|To think")]
+  ],
+  /* HSK 2-6 locked / temporary placeholders */
+  2:[["Ба зудӣ кушода мешавад",["敬请期待","jìngqǐng qīdài","Мунтазир бошед"],P("学习|xuéxí|Омӯзиш|Учиться|Study")]],
+  3:[["Ба зудӣ кушода мешавад",["敬请期待","jìngqǐng qīdài","Мунтазир бошед"],P("学习|xuéxí|Омӯзиш|Учиться|Study")]],
+  4:[["Ба зудӣ кушода мешавад",["敬请期待","jìngqǐng qīdài","Мунтазир бошед"],P("学习|xuéxí|Омӯзиш|Учиться|Study")]],
+  5:[["Ба зудӣ кушода мешавад",["敬请期待","jìngqǐng qīdài","Мунтазир бошед"],P("学习|xuéxí|Омӯзиш|Учиться|Study")]],
+  6:[["Ба зудӣ кушода мешавад",["敬请期待","jìngqǐng qīdài","Мунтазир бошед"],P("学习|xuéxí|Омӯзиш|Учиться|Study")]]
 };
+
 const ALL = Object.values(LV).flatMap(l => l.flatMap(x => x[2] || []));
 
 /* ================= STATE ================= */
@@ -176,14 +203,16 @@ const $ = s => document.querySelector(s);
 const LI = {tg:2, ru:3, en:4};
 const tr = w => w[LI[lang]];
 const shuf = a => a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
-const locked = i => i >= FREE_LIMIT && !premium;
-const wordsOf = l => LV[l].flatMap((x, i) => locked(i) ? [] : (x[2] || []));
+
+/* Lock rule: HSK 1 lessons 11+ are locked unless premium. All HSK 2-6 are locked unless premium. */
+const locked = i => (lvl === 1 && i >= FREE_LIMIT && !premium) || (lvl > 1 && !premium);
+const wordsOf = l => LV[l].flatMap((x, i) => (l === 1 && locked(i)) ? [] : (x[2] || []));
 const pool = () => { const p = wordsOf(lvl); return p.length >= 5 ? p : ALL; };
+const totalLessons = l => LV[l].length;
 const lvDone = l => done.filter(k => k.startsWith(l + "-")).length;
 function toast(m){ const t = document.createElement("div"); t.className = "toast"; t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
 
-/* ================= AUDIO =================
-   Plays an mp3 from AUDIO_BASE when set, otherwise the device's Chinese voice (Web Speech API). */
+/* ================= AUDIO ================= */
 function tts(t){
   if (!window.speechSynthesis) return toast("Овоз дастгирӣ намешавад");
   speechSynthesis.cancel();
@@ -203,7 +232,7 @@ const head = (t, extra = "") => `<div class="top"><button class="back glass" dat
 const slowBtn = () => `<button class="chip ${slow ? "on" : ""}" data-a="slow">🐢 Суст</button>`;
 const chipsLv = () => `<div class="chips">${[1,2,3,4,5,6].map(l => `<button class="chip ${l === lvl ? "on" : ""}" data-a="lvl" data-v="${l}">HSK ${l}</button>`).join("")}</div>`;
 const langBar = () => `<div class="chips" style="margin-bottom:12px">${[["tg","Тоҷикӣ"],["ru","Русский"],["en","English"]].map(l => `<button class="chip ${lang === l[0] ? "on" : ""}" data-a="lang" data-v="${l[0]}">${l[1]}</button>`).join("")}</div>`;
-const coverHTML = l => `<div class="cover"><div>HSK<b>${l}</b>汉语</div></div>`;   /* fallback when the book image is missing */
+const coverHTML = l => `<div class="cover"><div>HSK<b>${l}</b>汉语</div></div>`;
 const wordRow = (w, k = 0) => `<div class="word glass" style="animation-delay:${k * 50}ms"><div class="hz">${w[0]}</div>
   <div class="wt"><div class="py">${w[1]}</div><div class="tr">${tr(w)}</div></div>${pb(w[0])}</div>`;
 
@@ -215,11 +244,11 @@ function render(){ renderNav(); ({lessons:rLessons, vocab:rVocab, practice:rPrac
 
 /* ================= TAB: LESSONS ================= */
 function rLessons(){
-  const b = BOOKS[lvl], n = lvDone(lvl);
+  const b = BOOKS[lvl], n = lvDone(lvl), tot = totalLessons(lvl);
   const img = b ? `<img src="${b.img}" alt="HSK ${lvl}" onerror="this.outerHTML=coverHTML(${lvl})">` : coverHTML(lvl);
   show(`<h1>Chinese Master / <b>HSK ${lvl}</b></h1>${chipsLv()}
     <div class="book glass">${img}<div style="flex:1"><h3>${b ? b.t : "HSK " + lvl + " · барномаи таълим"}</h3>
-      <p>${n} аз 7 дарс анҷом ёфт</p><div class="pbar"><i style="width:${n / 7 * 100}%"></i></div></div></div>
+      <p>${n} аз ${tot} дарс анҷом ёфт</p><div class="pbar"><i style="width:${n / tot * 100}%"></i></div></div></div>
     <div class="sec">Дарсҳо</div>` +
     LV[lvl].map((x, i) => {
       const lk = locked(i), d = done.includes(lvl + "-" + i);
@@ -231,7 +260,7 @@ function rLessons(){
 }
 function openLesson(i){
   const x = LV[lvl][i]; cur = i;
-  if (locked(i)) return modal(x[0]);                                   /* paywall */
+  if (locked(i)) return modal(x[0]);
   if (!x[2]) return toast("Ин дарс ба зудӣ илова мешавад 🚧");
   const d = done.includes(lvl + "-" + i);
   show(head(`${i + 1}. ${x[0]}`, slowBtn()) + langBar() + x[2].map(wordRow).join("") +
@@ -260,7 +289,6 @@ function rPractice(){
     <button class="mc glass" data-a="quiz"><span>❓</span><div><h3>Викторина</h3><p>5 савол · интихоби тарҷума</p></div></button>
     <button class="mc glass" data-a="match"><span>🧩</span><div><h3>Ҷуфтҷӯӣ</h3><p>Ҳанзиро бо тарҷумааш пайваст кунед</p></div></button></div>`);
 }
-/* --- flashcards: tap to flip, mark known / repeat --- */
 let deck = [], fi = 0, fk = 0;
 function flash(){ deck = shuf(pool()).slice(0, 10); fi = 0; fk = 0; fStep(); }
 function fStep(){
@@ -271,7 +299,6 @@ function fStep(){
     <div class="face b glass"><div class="py" style="font-size:22px">${w[1]}</div><div class="big" style="font-size:34px">${tr(w)}</div>${pb(w[0])}</div></div></div>
     <div class="row2"><button class="cta alt" data-a="fno">🔁 Такрор</button><button class="cta" data-a="fyes">✓ Медонам</button></div>`, rPractice);
 }
-/* --- quiz: pick the right translation --- */
 let qs = [], qi = 0, sc = 0, lockQ = false;
 const mkQ = w => ({w, o: shuf([w, ...shuf(ALL.filter(x => x[0] !== w[0])).slice(0, 3)])});
 function quizFrom(words){ qs = shuf(words).slice(0, 5).map(mkQ); qi = 0; sc = 0; qStep(); }
@@ -281,7 +308,6 @@ function qStep(){
   show(head(`Савол ${qi + 1}/${qs.length}`, slowBtn()) + `<div class="qh glass"><div class="big">${q.w[0]}</div><div class="py">${q.w[1]}</div><div style="margin-top:10px">${pb(q.w[0])}</div></div>` +
     q.o.map((o, k) => `<button class="opt" data-a="qa" data-v="${k}">${tr(o)}</button>`).join(""), rPractice);
 }
-/* --- matching: 5 pairs, tap hanzi then its translation --- */
 let mp = [], ml = [], mr = [], msel = null, mgot = 0, mtry = 0;
 function match(){ mp = shuf(pool()).slice(0, 5).map(w => w.slice()); ml = shuf([0,1,2,3,4]); mr = shuf([0,1,2,3,4]); msel = null; mgot = 0; mtry = 0; mRender(); }
 function mRender(){
@@ -303,9 +329,9 @@ function rProfile(){
   const name = user ? user.first_name : "Донишҷӯ";
   show(`<h1>Профил</h1><div class="me glass"><div class="av">${name[0]}</div><div><h3>${name}</h3><p class="muted" style="font-size:13px">${premium ? "👑 Premium" : "Ҳисоби ройгон"}</p></div></div>
     <div class="stats"><div class="glass"><b>${done.length}</b><small>Дарсҳо</small></div><div class="glass"><b>${st.n}🔥</b><small>Рӯзҳои пай дар пай</small></div><div class="glass"><b>${ALL.length}</b><small>Калимаҳо</small></div></div>
-    ${premium ? "" : `<div class="prem glass"><div style="font-size:34px">👑</div><h3>Premium</h3><p>Дарсҳои 6+ дар ҳамаи сатҳҳои HSK 1–6, тестҳо ва луғати пурра.</p><button class="cta" data-a="unlock">🔓 Харидани Premium</button></div>`}
+    ${premium ? "" : `<div class="prem glass"><div style="font-size:34px">👑</div><h3>Premium</h3><p>Дарсҳои 11-15 дар HSK 1 ва сатҳҳои HSK 2–6 пурра кушода мешаванд.</p><button class="cta" data-a="unlock">🔓 Харидани Premium</button></div>`}
     <div class="sec">Пешрафт</div>` +
-    [1,2,3,4,5,6].map(l => `<div class="lv glass"><div><span>HSK ${l}</span><span class="muted">${lvDone(l)}/7</span></div><div class="pbar"><i style="width:${lvDone(l) / 7 * 100}%"></i></div></div>`).join("") +
+    [1,2,3,4,5,6].map(l => `<div class="lv glass"><div><span>HSK ${l}</span><span class="muted">${lvDone(l)}/${totalLessons(l)}</span></div><div class="pbar"><i style="width:${lvDone(l) / totalLessons(l) * 100}%"></i></div></div>`).join("") +
     `<div class="sec">Забони тарҷума</div>${langBar()}
     <button class="chip" style="margin-top:14px" data-a="demo">🧪 Демо: Premium ${premium ? "хомӯш" : "фаъол"} кунед</button>`);
 }
@@ -315,7 +341,7 @@ function modal(t){
 }
 const closeModal = () => $("#ov").classList.add("hide");
 
-/* ================= EVENTS (one delegated click handler) ================= */
+/* ================= EVENTS ================= */
 const A = {
   tab: v => { tab = v; render(); },
   lvl: v => { lvl = +v; store.set("lvl", lvl); render(); },
@@ -338,8 +364,8 @@ const A = {
     mtry++;
     if (i === msel) { mp[i].g = true; mgot++; msel = null; haptic("medium"); mRender(); }
     else { el.classList.add("shake"); haptic("heavy"); } },
-  unlock: () => { closeModal(); /* TODO: ask your aiogram bot for an invoice link, then tg.openInvoice(url, status => …) */ toast("💳 Пардохт ба зудӣ илова мешавад"); },
-  demo: () => { premium = !premium; store.set("premium", premium); rProfile(); },   /* remove before launch */
+  unlock: () => { closeModal(); toast("💳 Пардохт ба зудӣ илова мешавад"); },
+  demo: () => { premium = !premium; store.set("premium", premium); rProfile(); },
   close: closeModal,
   back: () => backFn ? backFn() : render()
 };
